@@ -1,0 +1,88 @@
+---
+title: "Bellabeat_Capstone_Project"
+author: "Baraka Mtana"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+options(repos = c(CRAN = "https://cran.rstudio.com"))
+```
+
+
+```{r}
+install.packages("curl")
+```
+
+
+```{r}
+remove.packages("rlang")
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+install.packages("tidyverse")
+```
+
+
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+
+```{r}
+daily_activity_df <- read_csv("C:/Users/LENOVO/Desktop/Bellabeat_Capstone-project/mturkfitbit_export_3.12.16-4.11.16/Fitabase Data 3.12.16-4.11.16/dailyActivity_merged.csv")
+```
+```{r}
+list.files("mturkfitbit_export_3.12.16-4.11.16/Fitabase Data 3.12.16-4.11.16")
+```
+
+
+```{r}
+upload_csvs <- function(){
+  ## Specify directory
+  directory <- "mturkfitbit_export_3.12.16-4.11.16/Fitabase Data 3.12.16-4.11.16"
+  
+  # Get list of CSV file names
+  csv_files <- list.files(directory, pattern = "\\.csv$", full.names = TRUE)
+  
+  # Loop through each file
+  for (file in csv_files) {
+    # Extract the file name without extension to use as the variable name
+    file_name <- gsub(".*/|\\.csv$", "", file)
+    
+    # Read the CSV file
+    df <- read.csv(file)
+    
+    # Assign the dataframe to a variable with the file name
+    assign(file_name, df, envir = .GlobalEnv)
+  }
+}
+
+# Call the function to load CSVs
+upload_csvs()
+
+```
+
+
+```{r}
+str (daily_activity_df)
+```
+
+
+
