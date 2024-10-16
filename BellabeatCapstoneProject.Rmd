@@ -2,7 +2,11 @@
 title: "Bellabeat_Capstone_Project"
 author: "Baraka Mtana"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  pdf_document:
+    keep_tex: true
+    number_sections: true
+  html_document: default
 ---
 
 
