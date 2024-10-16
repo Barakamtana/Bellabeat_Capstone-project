@@ -5,84 +5,92 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-
-```
-
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-options(repos = c(CRAN = "https://cran.rstudio.com"))
-```
-
-
-```{r}
-install.packages("curl")
-```
-
-
-```{r}
-remove.packages("rlang")
-```
-
-
-```{r}
-
-```
-
-
-```{r}
-install.packages("tidyverse")
-```
-
-
-```{r}
+# Set up environment
+# import libraries
 library(tidyverse)
-library(readr)
 ```
 
 
 ```{r}
-daily_activity_df <- read_csv("C:/Users/LENOVO/Desktop/Bellabeat_Capstone-project/mturkfitbit_export_3.12.16-4.11.16/Fitabase Data 3.12.16-4.11.16/dailyActivity_merged.csv")
-```
-```{r}
-list.files("mturkfitbit_export_3.12.16-4.11.16/Fitabase Data 3.12.16-4.11.16")
+# get and print working directory
+currentDir <- getwd() 
+print(currentDir)
+
+# list file in the working DIR
+list.files(currentDir)
+
+# we are interested in the csv files in 'mturkfitbit_export_3.12.16-4.11.16'
+# and 'Fitabase Data 3.12.16-4.11.16'
+csv_files_Dir <- file.path(
+  currentDir, 'mturkfitbit_export_3.12.16-4.11.16', 'Fitabase Data 3.12.16-4.11.16'
+)
+
+csv_files <- list.files(csv_files_Dir)
+len_cvs = length(csv_files)
+
+# csv_files <- list.files(csv_files_Dir, pattern = "\\.csv$", full.names = TRUE)
+# print(csv_files)
 ```
 
 
 ```{r}
-upload_csvs <- function(){
-  ## Specify directory
-  directory <- "mturkfitbit_export_3.12.16-4.11.16/Fitabase Data 3.12.16-4.11.16"
+# Initialize an empty list to store data frames
+dfs <- list()
+
+
+for (file in csv_files) {
   
-  # Get list of CSV file names
-  csv_files <- list.files(directory, pattern = "\\.csv$", full.names = TRUE)
+  print(paste("Working on", file))
   
-  # Loop through each file
-  for (file in csv_files) {
-    # Extract the file name without extension to use as the variable name
-    file_name <- gsub(".*/|\\.csv$", "", file)
-    
-    # Read the CSV file
-    df <- read.csv(file)
-    
-    # Assign the dataframe to a variable with the file name
-    assign(file_name, df, envir = .GlobalEnv)
-  }
+  # create df names
+  # split the file name str character
+  df_name <- strsplit(file, split = '\\.')[[1]] #Access the first and only string
+  
+  # get the first part of the string character which is basically the name 
+  # without the csv extension
+  df_name <- df_name[1]
+  
+  # concatenate the df_name with df
+  df_name <- paste0(df_name, "_df") # Use paste0 for no space between parts
+  
+  # create full path for each file so that we can import them
+  filepath <- file.path(csv_files_Dir, file)
+  
+  # read csv 
+  df <- read.csv((filepath))
+  
+  # append dfs and their names
+  dfs[[df_name]] <- df  # Store the data frame in the list, keyed by file path
+
+}
+```
+
+
+```{r}
+# Confirm that all df were read successfully
+if (len_cvs == length(dfs)) {
+  print("All files read successfully")
+} else {
+  print("Some files were not read correctly")
 }
 
-# Call the function to load CSVs
-upload_csvs()
-
+```
+```{r}
+print(names(dfs))
 ```
 
 
 ```{r}
-str (daily_activity_df)
+str(dfs[[1]])
 ```
 
+```{r}
 
+```
 
