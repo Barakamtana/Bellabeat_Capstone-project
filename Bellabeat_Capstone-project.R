@@ -2,6 +2,10 @@
 
 # import libraries
 library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+
 
 # print working directory
 currentDir <- getwd() 
@@ -64,13 +68,157 @@ if (len_cvs == length(dfs)) {
 dailyActivity_merged_df <-dfs[["dailyActivity_merged_df"]]
 str(dailyActivity_merged_df)
 
+#  check for missing values
 # we'll have a look at all unique value in if non of them is repeated
 # change ActivityDate from character to datetime
 # Assuming TotalSteps is cadance we'll see the average length of a step per person
 # See if TotalDistance and TrackerDistance distance record the same data
 # Calculate average TotalDistance, TrackerDistance, VeryActiveDistance, 
 # ModeratelyActiveDistance, LightActiveDistance, SedentaryActiveDistance,
-# Average callories lost per day
+# per atheletes
+
+
+# Here we'll write function we'll reuse
+# Check for missing values
+missing_value <- function(df){
+  print(paste("Count of total missing values", sum(is.na(df))))
+}
+missing_value(dailyActivity_merged_df)
+
+
+head(dailyActivity_merged_df[["ActivityDate"]], 10)
+
+# get number of unique values
+unique_value <- function(df, column_of_interest) {
+  #get the unique values
+  uniques <- unique(df[[column_of_interest]])
+  
+  # Get the unique values from the specified column
+  n_unique <- length(uniques)
+  
+  print(paste(column_of_interest, "has",  n_unique, "values"))
+  
+}
+
+# call function on dailyActivity_merged_df
+unique_value(dailyActivity_merged_df, "Id")
+# dailyActivity_merged_df has 35 unique ids
+
+# see the number of character in each character of the ActivityDate column
+# since we've already seen there are inconsistencies in the ActivityDate,
+# let's see if there are some date characters saved with hrs,min,and secs
+
+N_unique_char <- function(df, column_of_interest){
+  # Initialize/ preallocate a numeric vector of a specific length, initialized with zeros
+  n_char <- numeric(nrow(df)) 
+  
+  for (i in seq_along(df[[column_of_interest]])){
+    n_char[i] <- nchar(df[[column_of_interest]][i])
+  }
+  
+  # get the number of unique characters
+  character_lens <- unique(n_char)
+  
+  return(character_lens)
+}
+
+# see if there is uniformity in the Activity date columns
+N_unique_char(dailyActivity_merged_df, "ActivityDate")
+
+
+# change column to datetime
+change_to_date <- function(df, column_of_interest){
+  df[[column_of_interest]] <- 
+      as.POSIXct(
+      df[[column_of_interest]],
+      format="%m/%d/%Y",tz=Sys.timezone()
+      )
+  # confirm the datatype of the column of interest
+  print(paste(column_of_interest, "has" ,class(df[[column_of_interest]]) , "datatype"))
+  
+  print(head(df[column_of_interest], 10))
+  
+  
+  return(df)
+  
+}
+
+# call change_to_date on dailyActivity_merged_df
+dailyActivity_merged_df <- change_to_date(dailyActivity_merged_df, "ActivityDate")
+
+
+
+# See if TotalDistance and TrackerDistance distance record the same data
+# Check if the columns are identical
+identical_columns <- function(df, col1, col2){
+  if (identical(df[[col1]], df[[col2]])) {
+    print("The columns are identical.")
+  } else {
+    print("The columns are NOT identical.")
+  } 
+}
+
+# call identical_columns on dailyActivity_merged_df
+identical_columns(dailyActivity_merged_df, "TotalDistance", "TrackerDistance" )
+
+
+# calculate averages
+averages <- function(df){
+  averages_per_athlete <- df %>%
+    group_by(Id)  %>%
+      summarise(
+        Avg_Steps = mean(TotalSteps),
+        Avg_Distance = mean(TotalDistance),
+        Avg_TrackedDistance = mean(TrackerDistance),
+        Avg_LoggedActivityDistance = mean(LoggedActivitiesDistance),
+        Avg_VeryActiveDistance = mean(VeryActiveDistance),
+        Avg_ModeratelyActiveDistance = mean(ModeratelyActiveDistance),
+        Avg_LightActiveDistance = mean(LightActiveDistance),
+        Avg_SedentaryActiveDistance = mean(SedentaryActiveDistance),
+        Avg_Calories = mean(Calories)
+    )
+  
+  write.csv(averages_per_athlete, "customer_averages.csv", row.names = FALSE)
+  
+  print(head(averages_per_athlete, 5))
+}
+
+averages(dailyActivity_merged_df)
+
+
+#plot the correlation between calories and total distance 
+# Plot
+
+# line plot function 
+line_plot <- function(df, x_col, y_col){
+  ggplot (data = df) +
+    geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
+    labs(title = paste(x_col, "and", y_col, "relationsip"))
+}
+
+line_plot(df = dailyActivity_merged_df, x_col= "Calories", y_col = "TotalDistance")
+
+change_to_date_time <- function(df, column_of_interest){
+  df[[column_of_interest]] <- 
+    as.POSIXct(
+      df[[column_of_interest]],
+      format="%Y-%m-%d %H:%M:%S",tz=Sys.timezone()
+    )
+  # confirm the datatype of the column of interest
+  print(paste(column_of_interest, "has" ,class(df[[column_of_interest]]) , "datatype"))
+  
+  print(head(df[column_of_interest], 10))
+  
+  
+  return(df)
+  
+}
+
+change_to_date_time(heartrate_seconds_merged_df, "Time")
+
+
+
+
 
 heartrate_seconds_merged_df <- dfs[["heartrate_seconds_merged_df"]]
 str(heartrate_seconds_merged_df)
