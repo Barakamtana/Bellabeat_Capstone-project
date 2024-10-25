@@ -1,4 +1,4 @@
-"Id","Avg_Steps","Avg_Distance","Avg_TrackedDistance","Avg_LoggedActivityDistance","Avg_VeryActiveDistance","Avg_ModeratelyActiveDistance","Avg_LightActiveDistance","Avg_SedentaryActiveDistance","Avg_Calories"
+"Id","Avg_TotalSteps","Avg_TotalDistance","Avg_TrackerDistance","Avg_LoggedActivitiesDistance","Avg_VeryActiveDistance","Avg_ModeratelyActiveDistance","Avg_LightActiveDistance","Avg_SedentaryActiveDistance","Avg_Calories"
 1503960366,11640.5263157895,7.60736845120004,7.60736845120004,0,2.78368420036216,0.635263155949743,4.17842106442702,0,1796.21052631579
 1624580081,4226.26315789474,2.7468420769039,2.7468420769039,0,0.0515789468037455,0.0273684216173072,2.65947366388221,0.00526315777709609,1352.89473684211
 1644430081,9274.8,6.74900000095368,6.74900000095368,0,1.13399997502565,2.03000001162291,3.58000001907349,0.00799999982118606,2916.4

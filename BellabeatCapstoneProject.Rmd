@@ -3,16 +3,23 @@ title: "Bellabeat_Capstone_Project"
 author: "Baraka Mtana"
 date: "`r Sys.Date()`"
 output:
+  html_document: default
   pdf_document:
     keep_tex: true
     number_sections: true
-  html_document: default
 ---
 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+## Important shortcuts we'll reuse
+#### Restart r = "Ctrl + Shift + F10"
+#### Add <- = "Alt + i"
+#### New R_code line = "Ctrl + Shift + F10"
+#### "Ctrl + Shift + M"
+
 
 ```{r}
 # Set up environment
@@ -47,6 +54,220 @@ len_cvs = length(csv_files)
 # print(csv_files)
 ```
 
+```{r}
+# Here we'll write function we'll reuse
+
+# Check for missing values
+missing_value <- function(df, file){
+  
+  # Initialize an empty list that will be a key value pair
+  # It will hold df_name with missing values and the specific column with the missing values
+  df_with_missing_values <- list()
+  
+  if (sum(is.na(df)) == 0){
+    
+    print(paste(file, "Has no missing values"))
+  
+  }else if (sum(is.na(df)) > 0){
+    
+    
+    #append df_name with missing vales to df_with_missing_values
+    df_with_missing_values[[file]] <- c() # initialize an empty vector to store
+     #column names
+    
+    
+    #get df columns with missing values
+    colNames = colnames(df)
+    
+    for (col in colNames){
+      if (sum(is.na(df[[col]]))  > 0){
+  
+        df_with_missing_values[[file]] <- c(df_with_missing_values[[file]], col)
+        
+        print(paste("Total missing values in", file, col, "is",
+                    sum(is.na(df[col]))))
+      }
+    }
+    
+  }
+  
+  return(df_with_missing_values)
+}
+
+
+
+# get number of unique values
+unique_value <- function(df, column_of_interest) {
+  #get the unique values
+  uniques <- unique(df[[column_of_interest]])
+  
+  # Get the unique values from the specified column
+  n_unique <- length(uniques)
+  
+  print(paste(column_of_interest, "has",  n_unique, "values"))
+  
+}
+
+
+# Let's check if we are dealing with the same clients
+uniqueIDs_Comparison <- function (df1, column1, df2, column2){
+  missing_ids = c()
+  
+  initial_list = unique(df1[[column1]])
+  comparison_list = unique(df2[[column2]])
+  
+  
+  for (i in initial_list){
+    if (!(i %in% comparison_list)){
+      missing_ids <- c(missing_ids, i)
+      
+    }
+  }
+  
+  for (i in comparison_list){
+    if (!(i %in% initial_list)){
+      missing_ids <- c(missing_ids, i)
+      
+    }
+    
+  }
+  
+  if (length(missing_ids) == 0){
+    print("Dataframes have similar Id values")
+    
+    
+  }else{
+    print("Dataframes have different Id values")  
+    print(paste("No. of missing values", length(unique(missing_ids))))
+  }
+  
+  return(unique(missing_ids))
+}
+
+
+# Get the length of values in a column
+N_unique_char <- function(df, column_of_interest){
+  # Initialize/ pre-allocate a numeric vector of a specific length, initialized with   zeros
+  n_char <- numeric(nrow(df)) 
+  
+  for (i in seq_along(df[[column_of_interest]])){
+    n_char[i] <- nchar(df[[column_of_interest]][i])
+  }
+  
+  # get the number of unique characters
+  character_lens <- unique(n_char)
+  
+  return(character_lens)
+}
+
+  
+
+# change column to datetime
+change_to_dateTime <- function(df, column_of_interest){
+  
+  Values_Ncha_Column = N_unique_char(df, column_of_interest)
+  
+  #Check if all elements in the vector Values_Ncha_Column are either 8 or 9
+  if (all(Values_Ncha_Column %in% c(8, 9))){
+    df[[column_of_interest]] <- 
+      as.POSIXct(
+        df[[column_of_interest]],
+        format="%m/%d/%Y",
+        tz=Sys.timezone()
+    )
+    
+  }else if (!all(Values_Ncha_Column
+                 %in% c(8, 9))){
+    
+    df[[column_of_interest]] <- 
+      as.POSIXct(
+        df[[column_of_interest]],
+        format="%m/%d/%Y %H:%M:%S",
+        tz=Sys.timezone()
+    )
+  }
+  
+  # confirm the datatype of the column of interest
+  #print(paste(column_of_interest, "has" ,class(df[[column_of_interest]]),
+              #"datatype"))
+  
+  print(head(df[column_of_interest], 5))
+  print(tail(df[column_of_interest], 5))
+  
+  return(df)
+  
+}
+
+
+
+# Check if the columns are identical
+identical_columns <- function(df, col1, col2){
+  if (identical(df[[col1]], df[[col2]])) {
+    print("The columns are identical.")
+  } else {
+    print("The columns are NOT identical.")
+  } 
+}
+
+
+
+# Merge fucntion which we'll use with the reduce inbuilt function
+merge_dfs <- function(df1, df2){
+  merged_df <- merge(df1, df2, by = "Id")
+  
+  return(merged_df)
+}
+
+# calculate column averages
+Avgs <- function(df, column_names_vector){
+  
+  # initialize and empty list
+  column_Avgs = list()
+  
+  for (i in column_names_vector){
+    # get the data of the column
+    column_data <- df[, c("Id", i)]
+
+    
+    avg_per_athlete <- column_data %>% 
+      group_by(Id) %>% 
+      summarise(
+        # use "get" to retrieves the variable from key which is i and 
+        # Rename the column_Avgs keys to avoid conflicts
+        !!paste0("Avg_", i) := mean(get(i), na.rm = TRUE) 
+      )
+    
+    
+    column_Avgs[[i]] = avg_per_athlete
+    
+
+  }
+  
+  # Merge DataFrames on the 'ID' column
+  # How the reduce function works
+  # 1.Reduce will take the first two data frames from column_Avgs and
+  #pass them to merge_dfs.
+  # 2. The result of the first merge will be passed as the first argument
+  # to merge_dfs for the next data frame in the list, continuing this process until
+  #all data frames have been merged.
+
+  # Here the reduce function and
+  merged_df <- Reduce(merge_dfs, column_Avgs)
+
+  return(merged_df)
+}
+
+
+# line plot function 
+line_plot <- function(df, x_col, y_col){
+  ggplot (data = df) +
+    geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
+    labs(title = paste(x_col, "and", y_col, "relationsip"))
+}
+
+```
+
+
 
 ```{r}
 # Initialize an empty list to store data frames
@@ -72,12 +293,17 @@ for (file in csv_files) {
   filepath <- file.path(csv_files_Dir, file)
   
   # read csv 
-  df <- read.csv((filepath))
+  df <- read.csv(filepath)
+  
+  #Check if df has missing value
+  missing_value(df = df, file = file)
   
   # append dfs and their names
   dfs[[df_name]] <- df  # Store the data frame in the list, keyed by file path
 
 }
+
+
 ```
 
 
@@ -95,102 +321,6 @@ print(names(dfs))
 ```
 
 
-```{r}
-# Here we'll write function we'll reuse
-
-# Check for missing values
-missing_value <- function(df){
-  print(paste("Count of total missing values", sum(is.na(df))))
-}
-
-
-# get number of unique values
-unique_value <- function(df, column_of_interest) {
-  #get the unique values
-  uniques <- unique(df[[column_of_interest]])
-  
-  # Get the unique values from the specified column
-  n_unique <- length(uniques)
-  
-  print(paste(column_of_interest, "has",  n_unique, "values"))
-  
-}
-
-
-
-N_unique_char <- function(df, column_of_interest){
-  # Initialize/ pre-allocate a numeric vector of a specific length, initialized with   zeros
-  n_char <- numeric(nrow(df)) 
-  
-  for (i in seq_along(df[[column_of_interest]])){
-    n_char[i] <- nchar(df[[column_of_interest]][i])
-  }
-  
-  # get the number of unique characters
-  character_lens <- unique(n_char)
-  
-  return(character_lens)
-}
-  
-
-# change column to datetime
-change_to_date <- function(df, column_of_interest){
-  df[[column_of_interest]] <- 
-      as.POSIXct(
-      df[[column_of_interest]],
-      format="%m/%d/%Y" ,tz=Sys.timezone()
-      )
-  # confirm the datatype of the column of interest
-  print(paste(column_of_interest, "has" ,class(df[[column_of_interest]]) , "datatype"))
-  
-  print(head(df[column_of_interest], 10))
-  
-  
-  return(df)
-  
-}
-
-# Check if the columns are identical
-identical_columns <- function(df, col1, col2){
-  if (identical(df[[col1]], df[[col2]])) {
-    print("The columns are identical.")
-  } else {
-    print("The columns are NOT identical.")
-  } 
-}
-
-
-# calculate averages
-averages <- function(df){
-  averages_per_athlete <- df %>%
-    group_by(Id)  %>%
-      summarise(
-        Avg_Steps = mean(TotalSteps),
-        Avg_Distance = mean(TotalDistance),
-        Avg_TrackedDistance = mean(TrackerDistance),
-        Avg_LoggedActivityDistance = mean(LoggedActivitiesDistance),
-        Avg_VeryActiveDistance = mean(VeryActiveDistance),
-        Avg_ModeratelyActiveDistance = mean(ModeratelyActiveDistance),
-        Avg_LightActiveDistance = mean(LightActiveDistance),
-        Avg_SedentaryActiveDistance = mean(SedentaryActiveDistance),
-        Avg_Calories = mean(Calories)
-    )
-  
-  write.csv(averages_per_athlete, "customer_averages.csv", row.names = FALSE)
-  
-  print(head(averages_per_athlete, 5))
-}
-
-
-# line plot function 
-line_plot <- function(df, x_col, y_col){
-  ggplot (data = df) +
-    geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
-    labs(title = paste(x_col, "and", y_col, "relationsip"))
-}
-
-```
-
 
 
 ```{r}
@@ -206,35 +336,26 @@ str(dailyActivity_merged_df)
 # Average calories lost per day
 ```
 
-Check for missing values in dailyActivity_merged_df
-```{r}
-missing_value(dailyActivity_merged_df)
-```
-
 check how many customers are we dealing with
 ```{r}
 # call function on dailyActivity_merged_df
 unique_value(dailyActivity_merged_df, "Id")
 ```
 
-# see the number of character in each character of the ActivityDate column 
-# since we've already seen there are inconsistencies in the ActivityDate, -->
-# let's see if there are some date characters saved with hrs,min,and secs
+See the number of character in each character of the ActivityDate column 
+since we've already seen there are inconsistencies in the ActivityDate, -->
+let's see if there are some date characters saved with hrs,min,and secs
+
 
 ```{r}
-# see if there is uniformity in the Activity date columns
-N_unique_char(dailyActivity_merged_df, "ActivityDate")
-```
-We have different datatypes let's see if this will affect how changing the datatype of ActivityDate
-
-```{r}
-# see if there is uniformity in the Activity date columns
+# see if there is uniformity in the Activity date column
 N_unique_char(dailyActivity_merged_df, "ActivityDate")
 ```
 
 ```{r}
 # call change_to_date on dailyActivity_merged_df
-dailyActivity_merged_df <- change_to_date(dailyActivity_merged_df, "ActivityDate")
+dailyActivity_merged_df <- change_to_dateTime(dailyActivity_merged_df,
+                                              "ActivityDate")
 ```
 
 ```{r}
@@ -243,9 +364,24 @@ identical_columns(dailyActivity_merged_df, "TotalDistance", "TrackerDistance" )
 ```
 
 ```{r}
-averages(dailyActivity_merged_df)
+# Call the Avgs function to get the averages of some columns in dailyActivity_merged_df
+
+column_names <- c(names(dailyActivity_merged_df)[3:10], tail(names(dailyActivity_merged_df), 1))
+
+averages_df = Avgs(dailyActivity_merged_df, column_names)
+
+# Write the data frame to a CSV file
+# write.csv(averages_df, file = "customer_averages.csv", row.names = FALSE)
+
+
 ```
 
+```{r}
+averages_df
+```
+
+
+Check the correlation between TotalDistance and Calories
 ```{r}
 # call function on dailyActivity_merged_df 
 line_plot(df = dailyActivity_merged_df, x_col= "Calories", y_col = "TotalDistance")
@@ -259,18 +395,159 @@ There is a positive correlation between Calories and TotalDistance the is
 heartrate_seconds_merged_df <- dfs[["heartrate_seconds_merged_df"]]
 str(heartrate_seconds_merged_df)
 
+head(heartrate_seconds_merged_df, 5)
+tail(heartrate_seconds_merged_df, 5)
 # Check if the unique Ids are similar to the ones in dailyActivity_merged_df
 # change time column to datetime
 # see the average heart rate per unique id, see the correlation between the average heart rate and calories lost
 # see if there is any negative hr values
 ```
 
+
+Confirm if we are dealing with the same atheletes.
+Check if the unique Ids are similar to the ones in dailyActivity_merged_df
 ```{r}
-#Check for missing values in heartrate_seconds_merged_df
-missing_value(heartrate_seconds_merged_df)
+IDs <- uniqueIDs_Comparison(df1 = dailyActivity_merged_df, column1 = "Id", df2 = heartrate_seconds_merged_df, column2 = "Id")
+  
+```
+These means we we are only dealing with 14 clients in both dailyActivity_merged_df, and heartrate_seconds_merged_df dataframes.
+```{r}
+print(IDs)
+```
+
+Change the time columns to datetime
+```{r}
+heartrate_seconds_merged_df <- change_to_dateTime(heartrate_seconds_merged_df, "Time")
 ```
 
 
 
+see the average heart rate per unique id, see the correlation between the average heart rate and calories lost
+```{r}
+# calculate averages
+average_hr <- function(df, column_calculate_avg){
+  averages_hr_per_athlete <- df %>%
+    group_by(Id)  %>%
+      summarise(
+        Avg_Hr = mean(column_calculate_avg),
+    )
+  
+  print(head(averages_per_athlete, 5))
+}
+```
 
+
+```{r}
+
+average_hr_per_athlete <- Avgs(heartrate_seconds_merged_df, c(names(heartrate_seconds_merged_df)[3]))
+  
+  
+new_col_name = names(average_hr_per_athlete)[2]
+
+print(average_hr_per_athlete)
+print(max(average_hr_per_athlete[[new_col_name]]))  
+print(min(average_hr_per_athlete[[new_col_name]])) 
+print(median(ceiling(average_hr_per_athlete[[new_col_name]]), na.rm = TRUE))
+(mean(ceiling(average_hr_per_athlete[[new_col_name]])))
+```
+
+
+
+```{r}
+# Increase bottom margin to fit x-axis labels better
+par(mar = c(8, 5, 4, 2) + 0.1)  
+
+
+boxplot(Value ~ Id,
+        data = heartrate_seconds_merged_df,
+        main =" Different boxplots for each athlete's heartrate",
+        xlab = " ",
+        ylab = "Hearteate Frequency",
+        col = "orange",
+        #main = "Perpendicular",
+        las = 2 
+        #horizontal = TRUE
+        #border="brown"
+)
+
+```
+
+From the above plot we can see that we have huge outliers with some of the athletes having heart rate close to 200 and some close to almost 0
+
+
+#### Here we'll analyse hourlyCalories_merged_df
+```{r}
+hourlyCalories_merged_df <- dfs[['hourlyCalories_merged_df']]
+str(hourlyCalories_merged_df)
+
+# Check if the unique Ids are similar to the ones in heartrate_seconds_merged_df
+# see average calories lost each hour.
+# Check which our are people most active
+# change ActivityHour to datetime
+```
+
+```{r}
+# Check if the unique Ids are similar to the ones in dailyActivity_merged_df
+
+uniqueIDs_Comparison(dailyActivity_merged_df, "Id",  hourlyCalories_merged_df, "Id")
+
+```
+
+
+
+```{r}
+# Change to datetime
+hourlyCalories_merged_df <-  change_to_dateTime(hourlyCalories_merged_df, "ActivityHour")
+```
+
+```{r}
+hourlyIntensities_merged_df <- dfs[["hourlyIntensities_merged_df"]]
+str(hourlyIntensities_merged_df)
+
+# Check if the unique Ids are similar to the ones in dailyActivity_merged_df 
+# and hourlyCalories_merged_df and hourlyCalories_merged_df since they have similar number row
+# merge with hourlyCalories_merged_df see intensity and calories correlation on the same plot
+# see AverageIntensity and Calories corelaion
+
+```
+```{r}
+# See head and tail
+print(head(hourlyIntensities_merged_df), 5)
+print(tail(hourlyIntensities_merged_df), 5)
+```
+
+
+```{r}
+column1 = "Id"
+column2 = "Id"
+uniqueIDs_Comparison(hourlyCalories_merged_df, column1,
+                     hourlyIntensities_merged_df,
+                     column2)
+
+```
+```{r}
+change_to_dateTime(hourlyIntensities_merged_df, "ActivityHour")
+```
+
+
+```{r}
+# confirm that the ActivityHour in both hourlyCalories_merged_df and hourlyIntensities_merged_df are similar
+column1 = "ActivityHour"
+column2 = "ActivityHour"
+uniqueIDs_Comparison(hourlyCalories_merged_df, column1,
+                     hourlyIntensities_merged_df,
+                     column2)
+
+```
+
+
+```{r}
+hourlySteps_merged_df <- dfs[["hourlySteps_merged_df"]]
+str(hourlySteps_merged_df)
+
+# Check if the unique Ids are similar to the ones in hourlyCalories_merged_df
+# merge with  hourlyCalories_merged_df
+# see the at what time are people most active 
+# see correlation between steps and calories
+```
 

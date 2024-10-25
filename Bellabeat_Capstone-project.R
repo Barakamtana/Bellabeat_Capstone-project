@@ -231,7 +231,7 @@ str(heartrate_seconds_merged_df)
 hourlyCalories_merged_df <- dfs[['hourlyCalories_merged_df']]
 str(hourlyCalories_merged_df)
 
-# Check if the unique Ids are similar to the ones in dailyActivity_merged_df
+# Check if the unique Ids are similar to the ones in heartrate_seconds_merged_df
 # see average calories lost each hour.
 # Check which our are people most active
 # change ActivityHour to datetime
