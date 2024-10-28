@@ -417,7 +417,7 @@ print(IDs)
 
 Change the time columns to datetime
 ```{r}
-heartrate_seconds_merged_df <- change_to_dateTime(heartrate_seconds_merged_df, "Time")
+#heartrate_seconds_merged_df <- change_to_dateTime(heartrate_seconds_merged_df, "Time")
 ```
 
 
@@ -435,6 +435,7 @@ average_hr <- function(df, column_calculate_avg){
   print(head(averages_per_athlete, 5))
 }
 ```
+
 
 
 ```{r}
@@ -497,8 +498,9 @@ uniqueIDs_Comparison(dailyActivity_merged_df, "Id",  hourlyCalories_merged_df, "
 
 ```{r}
 # Change to datetime
-hourlyCalories_merged_df <-  change_to_dateTime(hourlyCalories_merged_df, "ActivityHour")
+#hourlyCalories_merged_df <-  change_to_dateTime(hourlyCalories_merged_df, "ActivityHour")
 ```
+
 
 ```{r}
 hourlyIntensities_merged_df <- dfs[["hourlyIntensities_merged_df"]]
@@ -512,8 +514,8 @@ str(hourlyIntensities_merged_df)
 ```
 ```{r}
 # See head and tail
-print(head(hourlyIntensities_merged_df), 5)
-print(tail(hourlyIntensities_merged_df), 5)
+head(hourlyIntensities_merged_df, 30)
+#print(tail(hourlyIntensities_merged_df), 5)
 ```
 
 
@@ -534,9 +536,38 @@ change_to_dateTime(hourlyIntensities_merged_df, "ActivityHour")
 # confirm that the ActivityHour in both hourlyCalories_merged_df and hourlyIntensities_merged_df are similar
 column1 = "ActivityHour"
 column2 = "ActivityHour"
-uniqueIDs_Comparison(hourlyCalories_merged_df, column1,
+non_unifom_dates =uniqueIDs_Comparison(hourlyCalories_merged_df, column1,
                      hourlyIntensities_merged_df,
                      column2)
+
+
+head_values <-  (head(non_unifom_dates, 5))
+tail_values <- (tail(non_unifom_dates, 5))
+
+print(head_values)
+print(tail_values)
+
+```
+
+
+```{r}
+hourlyCalories_merged_df[is.element(hourlyCalories_merged_df$ActivityHour,
+                                    c(1457773200)),]
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+# Example 3: Select Rows by list of column Values
+hourlyCalories_merged_df[df$state %in% c('1457773200','1457773200','1457773200'),]
+
+# Example 4: Using is.element()
+
+
 
 ```
 
