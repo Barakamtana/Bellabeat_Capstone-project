@@ -118,7 +118,6 @@ N_unique_char <- function(df, column_of_interest){
 
 
 
-# change column to datetime
 change_to_dateTime <- function(df, column_of_interest){
   
   Values_Ncha_Column = N_unique_char(df, column_of_interest)
@@ -138,7 +137,9 @@ change_to_dateTime <- function(df, column_of_interest){
     df[[column_of_interest]] <- 
       as.POSIXct(
         df[[column_of_interest]],
-        format="%m/%d/%Y %H:%M:%S",
+        # %I: Hour (01–12, for 12-hour clock)
+        # %p: AM/PM marker
+        format = "%m/%d/%Y %I:%M:%S %p", 
         tz=Sys.timezone()
       )
   }

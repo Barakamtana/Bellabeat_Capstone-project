@@ -11,15 +11,15 @@ output:
 
 
 ```{r setup, include=FALSE}
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Important shortcuts we'll reuse
 #### Restart r = "Ctrl + Shift + F10"
 #### Add <- = "Alt + i"
-#### New R_code line = "Ctrl + Shift + F10"
-#### "Ctrl + Shift + M"
-
+#### %>%  = "Ctrl + Shift + M"
+#### New r line code =  "Ctrl + Alt + I"
 
 ```{r}
 # Set up environment
@@ -29,6 +29,9 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 library(dplyr)
+
+install.packages("plotly")
+library(plotly)
 
 ```
 
@@ -133,11 +136,11 @@ uniqueIDs_Comparison <- function (df1, column1, df2, column2){
   }
   
   if (length(missing_ids) == 0){
-    print("Dataframes have similar Id values")
+    print("Dataframes have similar values")
     
     
   }else{
-    print("Dataframes have different Id values")  
+    print("Dataframes have different values")  
     print(paste("No. of missing values", length(unique(missing_ids))))
   }
   
@@ -162,7 +165,6 @@ N_unique_char <- function(df, column_of_interest){
 
   
 
-# change column to datetime
 change_to_dateTime <- function(df, column_of_interest){
   
   Values_Ncha_Column = N_unique_char(df, column_of_interest)
@@ -182,7 +184,9 @@ change_to_dateTime <- function(df, column_of_interest){
     df[[column_of_interest]] <- 
       as.POSIXct(
         df[[column_of_interest]],
-        format="%m/%d/%Y %H:%M:%S",
+        # %I: Hour (01–12, for 12-hour clock)
+        # %p: AM/PM marker
+        format = "%m/%d/%Y %I:%M:%S %p", 
         tz=Sys.timezone()
     )
   }
@@ -260,9 +264,61 @@ Avgs <- function(df, column_names_vector){
 
 # line plot function 
 line_plot <- function(df, x_col, y_col){
-  ggplot (data = df) +
+  plot <- ggplot (data = df) +
     geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
     labs(title = paste(x_col, "and", y_col, "relationsip"))
+  
+  print(plot)
+  
+}
+
+# group data by week or by date to get a clear picture of correlation
+weekDate_grouping <- function(df, weekOrdate){
+  # get group by the 1st 2 columns which will be "Id and column with POSIXct
+  #datatype"
+  grouping_Cols <- c(colnames(df)[1:2])
+  summarise_Cols <- c(colnames(df)[-1:-2])
+  
+  # Check if the first column is "Id" and the second column is of type POSIXct
+  if (grouping_Cols[1] == "Id" && inherits(df[[grouping_Cols[2]]], "POSIXct")){
+    
+    
+    # Determine grouping based on the 'weekOrdate' parameter
+    if(weekOrdate == "week"){
+      # Group by week number
+      df <- df %>%
+        mutate(Group = format(.data[[grouping_Cols[2]]], "%Y-%U"))
+    }else if(weekOrdate == "date"){
+      df <- df %>% 
+        mutate(Group = as.Date(.data[[grouping_Cols[2]]]))
+    }else {
+      stop("Invalid string value for 'weekOrdate'. Use 'week' or 'date'.")
+    }
+    
+    # If the above run successfully perform grouping and summarization
+    df <- df %>%
+      group_by(.data[[grouping_Cols[1]]], Group) %>%
+      summarize(
+        across(
+          all_of(summarise_Cols),
+          list(
+            Total = ~sum(.x, na.rm = TRUE),
+            Avg = ~mean(.x, na.rm = TRUE)
+          ),
+          #{col} acts as a Placeholder for the name of the original column being
+          #processed
+          #{fn}: Placeholder for the name of the function applied (e.g., "Total"
+          #or "Avg").
+          .names = "{col}_{fn}"
+        ),
+        .groups = "drop"
+      )
+    
+  }else{
+    stop("Please check the name and datatype of the 1st 2 columns.")
+  }
+  
+  return(df)
 }
 
 ```
@@ -417,7 +473,7 @@ print(IDs)
 
 Change the time columns to datetime
 ```{r}
-#heartrate_seconds_merged_df <- change_to_dateTime(heartrate_seconds_merged_df, "Time")
+heartrate_seconds_merged_df <- change_to_dateTime(heartrate_seconds_merged_df, "Time")
 ```
 
 
@@ -489,7 +545,6 @@ str(hourlyCalories_merged_df)
 
 ```{r}
 # Check if the unique Ids are similar to the ones in dailyActivity_merged_df
-
 uniqueIDs_Comparison(dailyActivity_merged_df, "Id",  hourlyCalories_merged_df, "Id")
 
 ```
@@ -498,7 +553,7 @@ uniqueIDs_Comparison(dailyActivity_merged_df, "Id",  hourlyCalories_merged_df, "
 
 ```{r}
 # Change to datetime
-#hourlyCalories_merged_df <-  change_to_dateTime(hourlyCalories_merged_df, "ActivityHour")
+hourlyCalories_merged_df <-  change_to_dateTime(hourlyCalories_merged_df, "ActivityHour")
 ```
 
 
@@ -514,7 +569,7 @@ str(hourlyIntensities_merged_df)
 ```
 ```{r}
 # See head and tail
-head(hourlyIntensities_merged_df, 30)
+head(hourlyIntensities_merged_df, 5)
 #print(tail(hourlyIntensities_merged_df), 5)
 ```
 
@@ -528,7 +583,7 @@ uniqueIDs_Comparison(hourlyCalories_merged_df, column1,
 
 ```
 ```{r}
-change_to_dateTime(hourlyIntensities_merged_df, "ActivityHour")
+hourlyIntensities_merged_df <- change_to_dateTime(hourlyIntensities_merged_df, "ActivityHour")
 ```
 
 
@@ -537,8 +592,7 @@ change_to_dateTime(hourlyIntensities_merged_df, "ActivityHour")
 column1 = "ActivityHour"
 column2 = "ActivityHour"
 non_unifom_dates =uniqueIDs_Comparison(hourlyCalories_merged_df, column1,
-                     hourlyIntensities_merged_df,
-                     column2)
+                     hourlyIntensities_merged_df,column2)
 
 
 head_values <-  (head(non_unifom_dates, 5))
@@ -548,30 +602,23 @@ print(head_values)
 print(tail_values)
 
 ```
-
-
 ```{r}
-hourlyCalories_merged_df[is.element(hourlyCalories_merged_df$ActivityHour,
-                                    c(1457773200)),]
-```
+# Join dataframes
+CaloriesIntensities_df <- hourlyCalories_merged_df%>%inner_join(hourlyIntensities_merged_df, 
+                              by=c('Id','ActivityHour'))
 
 
-```{r}
-
-```
+head(CaloriesIntensities_df, 5)
 
 
-```{r}
-# Example 3: Select Rows by list of column Values
-hourlyCalories_merged_df[df$state %in% c('1457773200','1457773200','1457773200'),]
-
-# Example 4: Using is.element()
-
-
+if(nrow(hourlyCalories_merged_df) == nrow(CaloriesIntensities_df) &&
+   (nrow(hourlyCalories_merged_df) == nrow(hourlyIntensities_merged_df))){
+  
+  print("Dataframes have same number of rows")
+  
+}
 
 ```
-
-
 ```{r}
 hourlySteps_merged_df <- dfs[["hourlySteps_merged_df"]]
 str(hourlySteps_merged_df)
@@ -581,4 +628,271 @@ str(hourlySteps_merged_df)
 # see the at what time are people most active 
 # see correlation between steps and calories
 ```
+
+
+```{r}
+hourlySteps_merged_df <- change_to_dateTime(hourlySteps_merged_df, "ActivityHour")
+```
+
+
+```{r}
+CaloriesIntensitiesSteps_df <- CaloriesIntensities_df%>%inner_join(
+  hourlySteps_merged_df, by=c('Id', 'ActivityHour'))
+
+head(CaloriesIntensitiesSteps_df, 5)
+
+
+if(nrow(CaloriesIntensitiesSteps_df) == nrow(CaloriesIntensities_df) &&
+   (nrow(CaloriesIntensitiesSteps_df) == nrow(hourlySteps_merged_df))){
+  
+  print("Dataframes have same number of rows")
+  
+}
+```
+
+```{r}
+# plot a line plot see see the correlation between calories, intensity and steps
+line_plot(CaloriesIntensitiesSteps_df, "Calories", "TotalIntensity")
+```
+```{r}
+line_plot(CaloriesIntensitiesSteps_df, "Calories", "StepTotal")
+```
+
+```{r}
+line_plot(CaloriesIntensitiesSteps_df, "Calories", "AverageIntensity")
+```
+
+```{r}
+colnames(CaloriesIntensitiesSteps_df)
+```
+
+```{r}
+weekDate_grouping <- function(df, weekOrdate){
+  # get group by the 1st 2 columns which will be "Id and column with POSIXct
+  #datatype"
+  grouping_Cols <- c(colnames(df)[1:2])
+  summarise_Cols <- c(colnames(df)[-1:-2])
+  
+  # Check if the first column is "Id" and the second column is of type POSIXct
+  if (grouping_Cols[1] == "Id" && inherits(df[[grouping_Cols[2]]], "POSIXct")){
+    
+    
+    # Determine grouping based on the 'weekOrdate' parameter
+    if(weekOrdate == "week"){
+      # Group by week number
+      df <- df %>%
+        mutate(Group = format(.data[[grouping_Cols[2]]], "%Y-%U"))
+    }else if(weekOrdate == "date"){
+      df <- df %>% 
+        mutate(Group = as.Date(.data[[grouping_Cols[2]]]))
+    }else {
+      stop("Invalid string value for 'weekOrdate'. Use 'week' or 'date'.")
+    }
+    
+    # If the above run successfully perform grouping and summarization
+    df <- df %>%
+      group_by(.data[[grouping_Cols[1]]], Group) %>%
+      summarize(
+        across(
+          all_of(summarise_Cols),
+          list(
+            Total = ~sum(.x, na.rm = TRUE),
+            Avg = ~mean(.x, na.rm = TRUE)
+          ),
+          #{col} acts as a Placeholder for the name of the original column being
+          #processed
+          #{fn}: Placeholder for the name of the function applied (e.g., "Total"
+          #or "Avg").
+          .names = "{col}_{fn}"
+        ),
+        .groups = "drop"
+      )
+    
+  }else{
+    stop("Please check the name and datatype of the 1st 2 columns.")
+  }
+  
+  return(df)
+}
+```
+
+
+```{r}
+CaloriesIntensitiesSteps_Daily_df <- weekDate_grouping(CaloriesIntensitiesSteps_df, "date")
+CaloriesIntensitiesSteps_Daily_df
+```
+
+```{r}
+names(CaloriesIntensitiesSteps_Daily_df)
+```
+
+```{r}
+line_plot(CaloriesIntensitiesSteps_Daily_df, "Calories_Total",
+          "TotalIntensity_Total")
+```
+
+```{r}
+CaloriesIntensitiesSteps_Weekly_df <-
+  weekDate_grouping(CaloriesIntensitiesSteps_df, "week")
+head(CaloriesIntensitiesSteps_Weekly_df, 5)
+```
+
+
+```{r}
+line_plot <- function(df, x_col, y_col){
+  plot <- ggplot (data = df) +
+    geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
+    labs(title = paste(x_col, "and", y_col, "relationsip"))
+  
+  print(plot)
+}
+```
+
+
+
+```{r echo=TRUE}
+IDS <- c(unique(CaloriesIntensitiesSteps_Weekly_df[["Id"]]))
+
+random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
+
+for (i in random_Ids){
+  print(i)
+  filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
+    filter(Id == i)
+           
+  line_plot(filtered_df,
+            "Calories_Total", "TotalIntensity_Total"
+  )
+}
+
+```
+
+
+
+```{r}
+# We'll perform daily Weighted averages since to get a better glimpse of the correlation since our data us concentrated at same place
+# Calculate daily weighted averages
+
+
+CaloriesIntensitiesSteps_daily_df <- CaloriesIntensitiesSteps_df %>%
+  mutate(date = date(ActivityHour)) %>%
+  group_by(date) %>%
+  summarize(
+    daily_calories = mean(Calories),
+    daily_Intensity = mean(TotalIntensity),
+    daily_Steps = mean(StepTotal)
+)
+
+head(CaloriesIntensitiesSteps_daily_df, 5)
+```
+
+
+```{r}
+# We'll perform weekly Weighted averages since to get a better glimpse of the correlation
+
+CaloriesIntensitiesSteps_Weekly_df <- CaloriesIntensitiesSteps_df %>%
+  mutate(week = week(ActivityHour)) %>%
+  group_by(week) %>%
+  summarize(
+    weekly_calories = mean(Calories),
+    weekly_Intensity = mean(TotalIntensity),
+    weekly_Steps = mean(StepTotal)
+    )
+CaloriesIntensitiesSteps_Weekly_df
+```
+
+
+```{r}
+CaloriesIntensitiesSteps_Weekly_df <- Weekly_grouping(CaloriesIntensitiesSteps_df)
+CaloriesIntensitiesSteps_Weekly_df
+```
+
+```{r}
+# Group by athlete and week, then summarize the data
+weekly_data <- CaloriesIntensitiesSteps_df %>%
+  mutate(Week = format(ActivityHour, "%Y-%U")) %>%  # Create year-week column
+  group_by(Id, Week) %>%  # Group by Id and week
+  summarize(
+    # get weekly cumulative sums 
+    Total_Calories = sum(Calories, na.rm = TRUE),
+    Total_Intensity = sum(TotalIntensity, na.rm = TRUE),
+    Total_Step = sum(StepTotal, na.rm = TRUE),
+    # get weekly mean
+    Avg_Calories = mean(Calories, na.rm = TRUE),  
+    Avg_Intensity = mean(TotalIntensity, na.rm = TRUE),
+    Avg_Step = mean(StepTotal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# View the result
+print(weekly_data)
+```
+
+
+```{r}
+line_plot(CaloriesIntensitiesSteps_Weekly_df, "weekly_calories",
+          "weekly_Intensity")
+```
+
+
+```{r}
+line_plot(CaloriesIntensitiesSteps_Weekly_df, "weekly_calories",
+          "weekly_Steps")
+```
+
+
+
+
+```{r}
+minuteCaloriesNarrow_merged_df <-  dfs[["minuteCaloriesNarrow_merged_df"]]
+str(minuteCaloriesNarrow_merged_df)
+# see if this is is a reflection heartrate_seconds_merged_df by deviding the 
+# seconds occurrences and see of they will be equivalent to minuteCaloriesNarrow_merged_df
+# occurrences
+```
+
+
+```{r}
+minuteIntensitiesNarrow_merged_df <- dfs[["minuteIntensitiesNarrow_merged_df"]]
+str(minuteIntensitiesNarrow_merged_df)
+# similarly check if the id are similar to those in minuteCaloriesNarrow_merged_df
+# check the correlation between Intensity and calories from minuteCaloriesNarrow_merged_df
+# merge this dfs as well
+# see then people are most active
+```
+
+
+```{r}
+minuteMETsNarrow_merged_df <-  dfs[["minuteMETsNarrow_merged_df"]]
+str(minuteMETsNarrow_merged_df)
+
+# I'd like to assume MET stands for metabolic equivalent ie
+# where One metabolic equivalent (MET) 
+# is defined as the amount of oxygen consumed while sitting at rest 
+# and is equal to 3.5 ml O2 per kg body weight x min.
+```
+
+
+```{r}
+minuteSleep_merged_df <- dfs[["minuteSleep_merged_df"]]
+str(minuteSleep_merged_df)
+
+# See that hour are people most asleep
+# change the date column to time date
+```
+
+
+```{r}
+minuteStepsNarrow_merged_df <- dfs[["minuteStepsNarrow_merged_df"]]
+str(minuteStepsNarrow_merged_df)
+
+# merge with minuteSleep_merged_df
+```
+
+```{r}
+weightLogInfo_merged_df <- dfs[["weightLogInfo_merged_df"]]
+str(weightLogInfo_merged_df)
+# see the correlation between weight and fat and and BMI
+```
+
 
