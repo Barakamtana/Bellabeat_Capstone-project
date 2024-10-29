@@ -221,8 +221,60 @@ Avgs <- function(df, column_names_vector){
 
 # line plot function 
 line_plot <- function(df, x_col, y_col){
-  ggplot (data = df) +
+  plot <- ggplot (data = df) +
     geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
     labs(title = paste(x_col, "and", y_col, "relationsip"))
+  
+  print(plot)
+}
+
+
+
+weekDate_grouping <- function(df, weekOrdate){
+  # get group by the 1st 2 columns which will be "Id and column with POSIXct
+  #datatype"
+  grouping_Cols <- c(colnames(df)[1:2])
+  summarise_Cols <- c(colnames(df)[-1:-2])
+  
+  # Check if the first column is "Id" and the second column is of type POSIXct
+  if (grouping_Cols[1] == "Id" && inherits(df[[grouping_Cols[2]]], "POSIXct")){
+    
+    
+    # Determine grouping based on the 'weekOrdate' parameter
+    if(weekOrdate == "week"){
+      # Group by week number
+      df <- df %>%
+        mutate(Group = format(.data[[grouping_Cols[2]]], "%Y-%U"))
+    }else if(weekOrdate == "date"){
+      df <- df %>% 
+        mutate(Group = as.Date(.data[[grouping_Cols[2]]]))
+    }else {
+      stop("Invalid string value for 'weekOrdate'. Use 'week' or 'date'.")
+    }
+    
+    # If the above run successfully perform grouping and summarization
+    df <- df %>%
+      group_by(.data[[grouping_Cols[1]]], Group) %>%
+      summarize(
+        across(
+          all_of(summarise_Cols),
+          list(
+            Total = ~sum(.x, na.rm = TRUE),
+            Avg = ~mean(.x, na.rm = TRUE)
+          ),
+          #{col} acts as a Placeholder for the name of the original column being
+          #processed
+          #{fn}: Placeholder for the name of the function applied (e.g., "Total"
+          #or "Avg").
+          .names = "{col}_{fn}"
+        ),
+        .groups = "drop"
+      )
+    
+  }else{
+    stop("Please check the name and datatype of the 1st 2 columns.")
+  }
+  
+  return(df)
 }
 
