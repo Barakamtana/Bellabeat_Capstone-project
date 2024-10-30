@@ -58,8 +58,6 @@ unique_value <- function(df, column_of_interest) {
 }
 
 
-
-
 # Let's check if we are dealing with the same clients
 uniqueIDs_Comparison <- function (df1, column1, df2, column2){
   missing_ids = c()
@@ -154,8 +152,6 @@ change_to_dateTime <- function(df, column_of_interest){
   return(df)
   
 }
-
-
 
 
 
