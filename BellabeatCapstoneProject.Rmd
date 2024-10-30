@@ -3,10 +3,10 @@ title: "Bellabeat_Capstone_Project"
 author: "Baraka Mtana"
 date: "`r Sys.Date()`"
 output:
-  html_document: default
   pdf_document:
     keep_tex: true
     number_sections: true
+  html_document: default
 ---
 
 
@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 #### New r line code =  "Ctrl + Alt + I"
 
 ```{r}
-options(repos = c(CRAN = "https://cloud.r-project.org/"))
+#options(repos = c(CRAN = "https://cloud.r-project.org/"))
 # Set up environment
 # import libraries
 library(tidyverse)
@@ -30,7 +30,7 @@ library(lubridate)
 library(ggplot2)
 library(dplyr)
 
-install.packages("plotly")
+#install.packages("plotly")
 library(plotly)
 
 ```
@@ -272,7 +272,6 @@ line_plot <- function(df, x_col, y_col){
   
 }
 
-# group data by week or by date to get a clear picture of correlation
 weekDate_grouping <- function(df, weekOrdate){
   # get group by the 1st 2 columns which will be "Id and column with POSIXct
   #datatype"
@@ -433,7 +432,7 @@ averages_df = Avgs(dailyActivity_merged_df, column_names)
 ```
 
 ```{r}
-averages_df
+head(averages_df, 5)
 ```
 
 
@@ -665,60 +664,21 @@ line_plot(CaloriesIntensitiesSteps_df, "Calories", "AverageIntensity")
 ```{r}
 colnames(CaloriesIntensitiesSteps_df)
 ```
-
 ```{r}
-weekDate_grouping <- function(df, weekOrdate){
-  # get group by the 1st 2 columns which will be "Id and column with POSIXct
-  #datatype"
-  grouping_Cols <- c(colnames(df)[1:2])
-  summarise_Cols <- c(colnames(df)[-1:-2])
+custom_line_plot <- function(df, x_col, y_col, i){
+    plot <- ggplot (data = df) +
+      geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
+      labs(title = paste(i, x_col, "and", y_col, "relationsip"))
   
-  # Check if the first column is "Id" and the second column is of type POSIXct
-  if (grouping_Cols[1] == "Id" && inherits(df[[grouping_Cols[2]]], "POSIXct")){
-    
-    
-    # Determine grouping based on the 'weekOrdate' parameter
-    if(weekOrdate == "week"){
-      # Group by week number
-      df <- df %>%
-        mutate(Group = format(.data[[grouping_Cols[2]]], "%Y-%U"))
-    }else if(weekOrdate == "date"){
-      df <- df %>% 
-        mutate(Group = as.Date(.data[[grouping_Cols[2]]]))
-    }else {
-      stop("Invalid string value for 'weekOrdate'. Use 'week' or 'date'.")
-    }
-    
-    # If the above run successfully perform grouping and summarization
-    df <- df %>%
-      group_by(.data[[grouping_Cols[1]]], Group) %>%
-      summarize(
-        across(
-          all_of(summarise_Cols),
-          list(
-            Total = ~sum(.x, na.rm = TRUE),
-            Avg = ~mean(.x, na.rm = TRUE)
-          ),
-          #{col} acts as a Placeholder for the name of the original column being
-          #processed
-          #{fn}: Placeholder for the name of the function applied (e.g., "Total"
-          #or "Avg").
-          .names = "{col}_{fn}"
-        ),
-        .groups = "drop"
-      )
-    
-  }else{
-    stop("Please check the name and datatype of the 1st 2 columns.")
-  }
+  print(plot)
   
-  return(df)
 }
 ```
-
+ 
 
 ```{r}
-CaloriesIntensitiesSteps_Daily_df <- weekDate_grouping(CaloriesIntensitiesSteps_df, "date")
+CaloriesIntensitiesSteps_Daily_df <- weekDate_grouping(CaloriesIntensitiesSteps_df,
+                                                       "date")
 CaloriesIntensitiesSteps_Daily_df
 ```
 
@@ -727,9 +687,41 @@ names(CaloriesIntensitiesSteps_Daily_df)
 ```
 
 ```{r}
-line_plot(CaloriesIntensitiesSteps_Daily_df, "Calories_Total",
-          "TotalIntensity_Total")
+IDS <- c(unique(CaloriesIntensitiesSteps_Daily_df[["Id"]]))
+
+random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
+
+for (i in random_Ids){
+  filtered_df <- CaloriesIntensitiesSteps_Daily_df %>%
+    filter(Id == i)
+           
+  custom_line_plot(filtered_df,
+            "TotalIntensity_Total","Calories_Total",i
+  )
+}
+
 ```
+### Most people hit a point of diminishing returns between intensity of 1500 to 2000
+### Advise clients to atleast hit an intensity of 1500 daily
+```{r}
+IDS <- c(unique(CaloriesIntensitiesSteps_Daily_df[["Id"]]))
+
+random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
+
+for (i in random_Ids){
+  filtered_df <- CaloriesIntensitiesSteps_Daily_df %>%
+    filter(Id == i)
+           
+  custom_line_plot(filtered_df,
+            "StepTotal_Total","Calories_Total",i
+  )
+}
+```
+#### different people get to the point of diminishing returns at different points there is no one fits all number of steps, however most people once they hit 2000 calories they hit a point of diminishing return
+
+#### Reccomendation 1: Once a person has hit 2000 calories a day they can quite exercing since since the steps they are quit insignificant
+
+#### Reccomendation 1: clients should cover the number of steps that get them to 2000 calories.
 
 ```{r}
 CaloriesIntensitiesSteps_Weekly_df <-
@@ -739,12 +731,17 @@ head(CaloriesIntensitiesSteps_Weekly_df, 5)
 
 
 ```{r}
-line_plot <- function(df, x_col, y_col){
-  plot <- ggplot (data = df) +
-    geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
-    labs(title = paste(x_col, "and", y_col, "relationsip"))
-  
-  print(plot)
+IDS <- c(unique(CaloriesIntensitiesSteps_Daily_df[["Id"]]))
+
+random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
+
+for (i in random_Ids){
+  filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
+    filter(Id == i)
+           
+  custom_line_plot(filtered_df,
+            "StepTotal_Total","Calories_Total",i
+  )
 }
 ```
 
@@ -756,16 +753,41 @@ IDS <- c(unique(CaloriesIntensitiesSteps_Weekly_df[["Id"]]))
 random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
 
 for (i in random_Ids){
-  print(i)
   filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
     filter(Id == i)
            
-  line_plot(filtered_df,
-            "Calories_Total", "TotalIntensity_Total"
+  custom_line_plot(filtered_df,
+            "TotalIntensity_Total","Calories_Total",i
   )
 }
 
 ```
+
+#### Key observation most athletes hit a point of diminishing returns after an intensity of 2500, thus they loose less caries yet the intensity is high,
+
+#### recommendation: athletes should maintain an optimal intensity of about 2000
+
+```{r echo=TRUE}
+IDS <- c(unique(CaloriesIntensitiesSteps_Weekly_df[["Id"]]))
+
+random_Ids = c(IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))])
+
+for (i in random_Ids){
+  filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
+    filter(Id == i)
+           
+  custom_line_plot(filtered_df,
+            "StepTotal_Total","Calories_Total", i
+  )
+}
+```
+#### Where as there in no partern in the number of steps that it takes to hit a point of diminishing returns, there's is pattern in the number of calories lost beyond which an athlete hits a point of diminishing returns which is about 15000 caries weekly
+
+
+```{r}
+colnames(CaloriesIntensitiesSteps_Weekly_df)
+```
+
 
 
 
@@ -785,114 +807,133 @@ CaloriesIntensitiesSteps_daily_df <- CaloriesIntensitiesSteps_df %>%
 
 head(CaloriesIntensitiesSteps_daily_df, 5)
 ```
-
-
 ```{r}
-# We'll perform weekly Weighted averages since to get a better glimpse of the correlation
+dfs <- list()
 
-CaloriesIntensitiesSteps_Weekly_df <- CaloriesIntensitiesSteps_df %>%
-  mutate(week = week(ActivityHour)) %>%
-  group_by(week) %>%
-  summarize(
-    weekly_calories = mean(Calories),
-    weekly_Intensity = mean(TotalIntensity),
-    weekly_Steps = mean(StepTotal)
-    )
-CaloriesIntensitiesSteps_Weekly_df
+
+for (file in csv_files) {
+  
+  print(paste("Working on", file))
+  
+  # create df names
+  # split the file name str character
+  df_name <- strsplit(file, split = '\\.')[[1]] #Access the first and only string
+  
+  # get the first part of the string character which is basically the name 
+  # without the csv extension
+  df_name <- df_name[1]
+  
+  # concatenate the df_name with df
+  df_name <- paste0(df_name, "_df") # Use paste0 for no space between parts
+  
+  # create full path for each file so that we can import them
+  filepath <- file.path(csv_files_Dir, file)
+  
+  # read csv 
+  df <- read.csv(filepath)
+  
+  #Check if df has missing value
+  missing_value(df = df, file = file)
+  
+  # append dfs and their names
+  dfs[[df_name]] <- df  # Store the data frame in the list, keyed by file path
+
+}
 ```
 
 
 ```{r}
-CaloriesIntensitiesSteps_Weekly_df <- Weekly_grouping(CaloriesIntensitiesSteps_df)
-CaloriesIntensitiesSteps_Weekly_df
+# Loop through the list and print key-value pairs
+minutes_dfs = list()
+
+for (key in names(dfs)) {
+
+  if (grepl("minute", key, ignore.case = TRUE)){
+    
+    print(paste("working on", key))
+    
+    col_Name <- colnames(dfs[[key]])
+    column_of_interest <- col_Name[2]
+    
+    df <- change_to_dateTime(dfs[[key]], column_of_interest)
+    
+    minutes_dfs[[key]] <- df
+  }
+    
+}
+
 ```
 
 ```{r}
-# Group by athlete and week, then summarize the data
-weekly_data <- CaloriesIntensitiesSteps_df %>%
-  mutate(Week = format(ActivityHour, "%Y-%U")) %>%  # Create year-week column
-  group_by(Id, Week) %>%  # Group by Id and week
-  summarize(
-    # get weekly cumulative sums 
-    Total_Calories = sum(Calories, na.rm = TRUE),
-    Total_Intensity = sum(TotalIntensity, na.rm = TRUE),
-    Total_Step = sum(StepTotal, na.rm = TRUE),
-    # get weekly mean
-    Avg_Calories = mean(Calories, na.rm = TRUE),  
-    Avg_Intensity = mean(TotalIntensity, na.rm = TRUE),
-    Avg_Step = mean(StepTotal, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-# View the result
-print(weekly_data)
-```
-
-
-```{r}
-line_plot(CaloriesIntensitiesSteps_Weekly_df, "weekly_calories",
-          "weekly_Intensity")
-```
-
-
-```{r}
-line_plot(CaloriesIntensitiesSteps_Weekly_df, "weekly_calories",
-          "weekly_Steps")
-```
-
-
-
-
-```{r}
-minuteCaloriesNarrow_merged_df <-  dfs[["minuteCaloriesNarrow_merged_df"]]
-str(minuteCaloriesNarrow_merged_df)
-# see if this is is a reflection heartrate_seconds_merged_df by deviding the 
-# seconds occurrences and see of they will be equivalent to minuteCaloriesNarrow_merged_df
-# occurrences
-```
-
-
-```{r}
-minuteIntensitiesNarrow_merged_df <- dfs[["minuteIntensitiesNarrow_merged_df"]]
-str(minuteIntensitiesNarrow_merged_df)
-# similarly check if the id are similar to those in minuteCaloriesNarrow_merged_df
-# check the correlation between Intensity and calories from minuteCaloriesNarrow_merged_df
-# merge this dfs as well
-# see then people are most active
-```
-
-
-```{r}
-minuteMETsNarrow_merged_df <-  dfs[["minuteMETsNarrow_merged_df"]]
-str(minuteMETsNarrow_merged_df)
-
-# I'd like to assume MET stands for metabolic equivalent ie
-# where One metabolic equivalent (MET) 
-# is defined as the amount of oxygen consumed while sitting at rest 
-# and is equal to 3.5 ml O2 per kg body weight x min.
-```
-
-
-```{r}
-minuteSleep_merged_df <- dfs[["minuteSleep_merged_df"]]
-str(minuteSleep_merged_df)
+minuteSleep_merged_df <- minutes_dfs[["minuteSleep_merged_df"]]
+print(head(minuteSleep_merged_df))
 
 # See that hour are people most asleep
 # change the date column to time date
+
+unique(minuteSleep_merged_df[['value']])
+
+```
+
+
+
+```{r}
+# Remove the key 'b' from the list
+print(length(minutes_dfs))
+minutes_dfs[["minuteSleep_merged_df"]] <- NULL
+print(paste("Length After removing minuteSleep_merged_df",length(minutes_dfs)))
+```
+
+```{r}
+for (i in minutes_dfs){
+  print(i)
+  main_df = minutes_dfs[[1]]
+  
+  column1 <- "ActivityMinute"
+  column2 <- "ActivityMinute"
+  
+  missing_values <- uniqueIDs_Comparison(main_df, column1, minutes_dfs[[1]],
+                                         column2)
+}
+
+```
+
+```{r}
+# Merge all dataframes on 'Id' and 'Date'
+Minuted_Merged_df <- reduce(minutes_dfs, function(x, y) {
+  merge(x, y, by = c("Id", "ActivityMinute"), all = TRUE) 
+})
+
+head(Minuted_Merged_df, 5)
+```
+
+```{r}
+Sleep_Minuted_df <- minuteSleep_merged_df%>%inner_join(
+  Minuted_Merged_df,
+  by=c("Id" = "Id", "date" = "ActivityMinute"))
+
 ```
 
 
 ```{r}
-minuteStepsNarrow_merged_df <- dfs[["minuteStepsNarrow_merged_df"]]
-str(minuteStepsNarrow_merged_df)
-
-# merge with minuteSleep_merged_df
+head(Sleep_Minuted_df, 5)
 ```
+
+
 
 ```{r}
 weightLogInfo_merged_df <- dfs[["weightLogInfo_merged_df"]]
-str(weightLogInfo_merged_df)
+head(weightLogInfo_merged_df, 5)
+
+print(length(weightLogInfo_merged_df[['Id']]))
+
 # see the correlation between weight and fat and and BMI
 ```
 
+```{r}
+ggplot (data = weightLogInfo_merged_df) +
+  geom_point(mapping = aes(x = BMI , y = WeightKg), color = "blue" ) +
+  geom_point(mapping = aes(x = BMI , y = WeightPounds), color = "red" ) +
+  labs(title = "Weight  and BMI relation")
+```
 
