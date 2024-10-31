@@ -216,11 +216,20 @@ Avgs <- function(df, column_names_vector){
 
 
 # line plot function 
-line_plot <- function(df, x_col, y_col){
-  plot <- ggplot (data = df) +
-    geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
-    labs(title = paste(x_col, "and", y_col, "relationsip"))
+line_plot <- function(df, x_col, y_col, i = NULL) {
+  # Determine the title based on whether 'i' is provided
+  plot_title <- if (!is.null(i)) {
+    paste(i, x_col, "and", y_col, "relationship")
+  } else {
+    paste(x_col, "and", y_col, "relationship")
+  }
   
+  # Create the plot
+  plot <- ggplot(data = df) +
+    geom_line(mapping = aes(x = .data[[x_col]], y = .data[[y_col]])) +
+    labs(title = plot_title)
+  
+  # Print the plot
   print(plot)
 }
 

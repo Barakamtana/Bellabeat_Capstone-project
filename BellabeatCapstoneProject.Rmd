@@ -30,9 +30,6 @@ library(lubridate)
 library(ggplot2)
 library(dplyr)
 
-#install.packages("plotly")
-library(plotly)
-
 ```
 
 
@@ -263,14 +260,24 @@ Avgs <- function(df, column_names_vector){
 
 
 # line plot function 
-line_plot <- function(df, x_col, y_col){
-  plot <- ggplot (data = df) +
-    geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
-    labs(title = paste(x_col, "and", y_col, "relationsip"))
+line_plot <- function(df, x_col, y_col, i = NULL) {
+  # Determine the title based on whether 'i' is provided
+  plot_title <- if (!is.null(i)) {
+    paste(i, x_col, "and", y_col, "relationship")
+  } else {
+    paste(x_col, "and", y_col, "relationship")
+  }
   
+  # Create the plot
+  plot <- ggplot(data = df) +
+    geom_line(mapping = aes(x = .data[[x_col]], y = .data[[y_col]])) +
+    labs(title = plot_title)
+  
+  # Print the plot
   print(plot)
-  
 }
+
+
 
 weekDate_grouping <- function(df, weekOrdate){
   # get group by the 1st 2 columns which will be "Id and column with POSIXct
@@ -320,6 +327,22 @@ weekDate_grouping <- function(df, weekOrdate){
   return(df)
 }
 
+
+random_plots <- function(df, fraction_of_all_len_df, X_col, Y_col){
+  
+  IDS <- c(unique(df[["Id"]]))
+  
+  num_samples <- ceiling(length(IDS) * fraction_of_all_len_df)
+  random_Ids <- sample(IDS, size = num_samples, replace = FALSE)
+  
+  for (i in random_Ids){
+    filtered_df <- df %>%
+    filter(Id == i)
+    line_plot(filtered_df,
+              X_col, Y_col, i
+    )
+  }
+}
 ```
 
 
@@ -417,6 +440,42 @@ dailyActivity_merged_df <- change_to_dateTime(dailyActivity_merged_df,
 # call identical_columns on dailyActivity_merged_df
 identical_columns(dailyActivity_merged_df, "TotalDistance", "TrackerDistance" )
 ```
+
+
+```{r}
+error_df <-  dailyActivity_merged_df[, c('TotalDistance', 'TrackerDistance')]
+
+difference <- c()
+total_distance <- c()
+for (i in 1:nrow(error_df)){
+  # get value of i
+  total_dist_i <- error_df[["TotalDistance"]][i]
+  tracker_dist_i <- error_df[["TrackerDistance"]][i]
+  
+  
+  
+  error <-total_dist_i - tracker_dist_i
+  if(error != 0){
+    difference <- c(difference, error)
+    total_distance <- c(total_distance, total_dist_i)
+  }
+    
+}
+
+# calculate error percentage
+percentage_error <- (sum(abs(difference))/ sum(total_distance)) *100
+percentage_error
+
+
+print(paste("Percentage of devices with errors",
+            (length(error_df)/length(total_distance))*100))
+
+```
+#### with a 12.5 percent of Bellabeat devices not giving accurate data, this is significantly high which show devices should be improves,
+
+#### Faulty devices have a 20% error which is rather too high to work with this shows that tracker should be impriove to atleast reduce this figure to a negligible one atleast 5% since achieving 100% accuracy maynot be achieveable.
+
+
 
 ```{r}
 # Call the Avgs function to get the averages of some columns in dailyActivity_merged_df
@@ -665,7 +724,7 @@ line_plot(CaloriesIntensitiesSteps_df, "Calories", "AverageIntensity")
 colnames(CaloriesIntensitiesSteps_df)
 ```
 ```{r}
-custom_line_plot <- function(df, x_col, y_col, i){
+line_plot <- function(df, x_col, y_col, i){
     plot <- ggplot (data = df) +
       geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
       labs(title = paste(i, x_col, "and", y_col, "relationsip"))
@@ -695,7 +754,7 @@ for (i in random_Ids){
   filtered_df <- CaloriesIntensitiesSteps_Daily_df %>%
     filter(Id == i)
            
-  custom_line_plot(filtered_df,
+  line_plot(filtered_df,
             "TotalIntensity_Total","Calories_Total",i
   )
 }
@@ -703,6 +762,18 @@ for (i in random_Ids){
 ```
 ### Most people hit a point of diminishing returns between intensity of 1500 to 2000
 ### Advise clients to atleast hit an intensity of 1500 daily
+
+
+
+```{r}
+random_plots(df = CaloriesIntensitiesSteps_Daily_df,
+             fraction_of_all_len_df = 0.3,
+             X_col = "StepTotal_Total",
+             Y_col ="Calories_Total")
+```
+
+
+
 ```{r}
 IDS <- c(unique(CaloriesIntensitiesSteps_Daily_df[["Id"]]))
 
@@ -712,7 +783,7 @@ for (i in random_Ids){
   filtered_df <- CaloriesIntensitiesSteps_Daily_df %>%
     filter(Id == i)
            
-  custom_line_plot(filtered_df,
+  line_plot(filtered_df,
             "StepTotal_Total","Calories_Total",i
   )
 }
@@ -739,7 +810,7 @@ for (i in random_Ids){
   filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
     filter(Id == i)
            
-  custom_line_plot(filtered_df,
+  line_plott(filtered_df,
             "StepTotal_Total","Calories_Total",i
   )
 }
@@ -756,7 +827,7 @@ for (i in random_Ids){
   filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
     filter(Id == i)
            
-  custom_line_plot(filtered_df,
+  line_plot(filtered_df,
             "TotalIntensity_Total","Calories_Total",i
   )
 }
@@ -776,7 +847,7 @@ for (i in random_Ids){
   filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
     filter(Id == i)
            
-  custom_line_plot(filtered_df,
+  line_plot(filtered_df,
             "StepTotal_Total","Calories_Total", i
   )
 }
@@ -843,7 +914,7 @@ for (file in csv_files) {
 
 
 ```{r}
-# Loop through the list and print key-value pairs
+# Loop through the list and see if key has minuted in it
 minutes_dfs = list()
 
 for (key in names(dfs)) {
@@ -870,11 +941,90 @@ print(head(minuteSleep_merged_df))
 
 # See that hour are people most asleep
 # change the date column to time date
-
 unique(minuteSleep_merged_df[['value']])
 
 ```
 
+
+```{r}
+HrSleep_df <- minuteSleep_merged_df[, c('Id','date', 'value')]
+
+# Create a new column with the hour in AM/PM format
+HrSleep_df$Hr <- format(HrSleep_df$date, "%I %p")
+
+print(head(HrSleep_df))
+```
+
+```{r}
+# Ensure 'value' is treated as a factor (categorical)
+HrSleep_df$value <- factor(HrSleep_df$value, levels = c(1, 2, 3))
+
+
+# Define the correct order for the Hr factor
+HrSleep_df$Hr <- factor(HrSleep_df$Hr, 
+                        levels = c("12 AM","01 AM", "02 AM", "03 AM", "04 AM",
+                                   "05 AM","06 AM", "07 AM", "08 AM", "09 AM",
+                                   "10 AM","11 AM", "01 PM", "02 PM", "03 PM",
+                                   "04 PM", "05 PM", "06 PM", "07 PM", "08 PM",
+                                   "09 PM", "10 PM", "11 PM", "12 PM"))
+
+# Get count of occcurances per hour
+heatmap_data <- HrSleep_df %>%
+  group_by(Hr, value) %>%
+  summarize(count = n(), .groups = 'drop')  
+
+
+# Plot the heatmap
+ggplot(heatmap_data, aes(x = Hr, y = value, fill = count)) + 
+  geom_tile() + 
+  scale_fill_gradient(low = "white", high = "blue") + 
+  labs(title = "Hour of the day and sleep Intensity correlation",
+       x = "Hour (AM/PM)", 
+       y = "Sleep Intensity", fill = "Count"
+    ) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+#### We might not know what the values 1,2,3 represent but from the correlation plot it seem like they represent sleep intensity with 1 being highly asleep as 3 as less asleep or awake
+
+#### Further we could conclude that most people sleep start sleeping between 9PM and 10PM all the way to 7Am
+
+#### Most people are heavily asleep between 2AM all the way to 5AM and 3PM being the point when they are deepest asleep.
+
+
+
+```{r}
+daily_sleep_count <- minuteSleep_merged_df %>%
+  # Create day column to represent the date alone without time
+  mutate(day = as.Date(date)) %>% 
+  group_by(Id, day, value) %>%
+  summarize(
+    count = n(),
+    .groups = "drop"
+  ) %>% 
+  # Create a new column such that 1,2, 3 counts will be represented daily
+  pivot_wider(names_from = value, values_from = count, values_fill = 0)
+
+# see if people sleep during weekday or weekends
+# Process the data to add weekday/weekend information
+daily_sleep_count <- daily_sleep_count %>%
+  mutate(
+    week_day = weekdays(day)
+  )
+
+# Get a matrix with counts of 1, 2, 3 for each day of the week
+weekly_counts <- daily_sleep_count %>%
+  group_by(week_day) %>%
+  summarize(
+    "1" = sum(`1`),  
+    "2" = sum(`2`),
+    "3" = sum(`3`),
+    .groups = "drop"
+  )
+weekly_counts
+
+```
+#### From the above matrix we can see that people are sleep the most on Sunday closely followed by Saturday and Monday
 
 
 ```{r}
@@ -885,6 +1035,7 @@ print(paste("Length After removing minuteSleep_merged_df",length(minutes_dfs)))
 ```
 
 ```{r}
+# See if the the remainin dfs in minutes_df have similar values in ActivityMinute column since the are similar in shape
 for (i in minutes_dfs){
   print(i)
   main_df = minutes_dfs[[1]]
@@ -898,27 +1049,44 @@ for (i in minutes_dfs){
 
 ```
 
+
 ```{r}
 # Merge all dataframes on 'Id' and 'Date'
 Minuted_Merged_df <- reduce(minutes_dfs, function(x, y) {
   merge(x, y, by = c("Id", "ActivityMinute"), all = TRUE) 
 })
 
-head(Minuted_Merged_df, 5)
+print(head(Minuted_Merged_df, 5))
+print(tail(Minuted_Merged_df, 5))
+
 ```
 
 ```{r}
-Sleep_Minuted_df <- minuteSleep_merged_df%>%inner_join(
-  Minuted_Merged_df,
-  by=c("Id" = "Id", "date" = "ActivityMinute"))
+ggplot (data = Minuted_Merged_df) +
+  geom_point(mapping = aes(x = METs , y = Steps), color = "blue" ) 
+```
+#### We can't make any sence out of this lets perfomm weighted average on it
 
+```{r}
+weighted_AVG_df <- weekDate_grouping(Minuted_Merged_df, "date")
 ```
 
 
 ```{r}
-head(Sleep_Minuted_df, 5)
-```
+IDS <- c(unique(Minuted_Merged_df[["Id"]]))
 
+random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
+
+for (i in random_Ids){
+  filtered_df <- Minuted_Merged_df %>%
+    filter(Id == i)
+           
+  line_plot(filtered_df,
+            "METs","Steps",i
+  )
+}
+
+```
 
 
 ```{r}
@@ -929,6 +1097,7 @@ print(length(weightLogInfo_merged_df[['Id']]))
 
 # see the correlation between weight and fat and and BMI
 ```
+
 
 ```{r}
 ggplot (data = weightLogInfo_merged_df) +
