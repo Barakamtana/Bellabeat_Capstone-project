@@ -399,15 +399,12 @@ print(names(dfs))
 ```
 
 
-
-
 ```{r}
 dailyActivity_merged_df <-dfs[["dailyActivity_merged_df"]]
 str(dailyActivity_merged_df)
 
 # we'll have a look at all unique value in if non of them is repeated
 # change ActivityDate from character to datetime
-# Assuming TotalSteps is cadence we'll see the average length of a step per person
 # See if TotalDistance and TrackerDistance distance record the same data
 # Calculate average TotalDistance, TrackerDistance, VeryActiveDistance, 
 # ModeratelyActiveDistance, LightActiveDistance, SedentaryActiveDistance,
@@ -423,8 +420,6 @@ unique_value(dailyActivity_merged_df, "Id")
 See the number of character in each character of the ActivityDate column 
 since we've already seen there are inconsistencies in the ActivityDate, -->
 let's see if there are some date characters saved with hrs,min,and secs
-
-
 ```{r}
 # see if there is uniformity in the Activity date column
 N_unique_char(dailyActivity_merged_df, "ActivityDate")
@@ -440,38 +435,57 @@ dailyActivity_merged_df <- change_to_dateTime(dailyActivity_merged_df,
 # call identical_columns on dailyActivity_merged_df
 identical_columns(dailyActivity_merged_df, "TotalDistance", "TrackerDistance" )
 ```
-
-
 ```{r}
-error_df <-  dailyActivity_merged_df[, c('TotalDistance', 'TrackerDistance')]
-
+error_df <-  dailyActivity_merged_df[, c('Id', 'TotalDistance',
+                                         'TrackerDistance')]
+Id_s <- c() 
 difference <- c()
 total_distance <- c()
+
 for (i in 1:nrow(error_df)){
-  # get value of i
+  
+  Id_i <-  error_df[["Id"]][i]
   total_dist_i <- error_df[["TotalDistance"]][i]
   tracker_dist_i <- error_df[["TrackerDistance"]][i]
   
   
-  
   error <-total_dist_i - tracker_dist_i
   if(error != 0){
+    Id_s <- c(Id_s, Id_i)
     difference <- c(difference, error)
     total_distance <- c(total_distance, total_dist_i)
+    
   }
     
 }
 
+# see how many of all the athletes have faulty devices
+print(length(unique(Id_s)))
+
+# If 5 out of all athletes are the only ones with faulty devices
+# see what percentage of Bellabeat devices are faulty
+Number_of_clients <- length(unique(dailyActivity_merged_df[['Id']]))
+Client_with_faulty_devices <- length(unique(Id_s))
+
+
+print(
+  paste(
+    "Percentage of devices with errors",
+            round((Client_with_faulty_devices/Number_of_clients) * 100, 2)
+  )
+)
+
 # calculate error percentage
 percentage_error <- (sum(abs(difference))/ sum(total_distance)) *100
-percentage_error
-
-
-print(paste("Percentage of devices with errors",
-            (length(error_df)/length(total_distance))*100))
-
+print(
+  paste(
+    "Faulty Devices have a percentahe error of",
+    round(percentage_error, 2)
+  )
+)
 ```
-#### with a 12.5 percent of Bellabeat devices not giving accurate data, this is significantly high which show devices should be improves,
+
+#### with a 14.29 percent of Bellabeat devices not giving accurate data, this is significantly high which show devices should be improves,
 
 #### Faulty devices have a 20% error which is rather too high to work with this shows that tracker should be impriove to atleast reduce this figure to a negligible one atleast 5% since achieving 100% accuracy maynot be achieveable.
 
@@ -485,8 +499,7 @@ column_names <- c(names(dailyActivity_merged_df)[3:10], tail(names(dailyActivity
 averages_df = Avgs(dailyActivity_merged_df, column_names)
 
 # Write the data frame to a CSV file
-# write.csv(averages_df, file = "customer_averages.csv", row.names = FALSE)
-
+write.csv(averages_df, file = "customer_averages.csv", row.names = FALSE)
 
 ```
 
@@ -500,11 +513,9 @@ Check the correlation between TotalDistance and Calories
 # call function on dailyActivity_merged_df 
 line_plot(df = dailyActivity_merged_df, x_col= "Calories", y_col = "TotalDistance")
 ```
-There is a positive correlation between Calories and TotalDistance the is 
-
+There is a general positive correlation between Calories and TotalDistance 
 
 ## Let's get to see heartrate_seconds_merged_df
-
 ```{r}
 heartrate_seconds_merged_df <- dfs[["heartrate_seconds_merged_df"]]
 str(heartrate_seconds_merged_df)
@@ -518,13 +529,16 @@ tail(heartrate_seconds_merged_df, 5)
 ```
 
 
-Confirm if we are dealing with the same atheletes.
+Confirm if we are dealing with the same athletes.
 Check if the unique Ids are similar to the ones in dailyActivity_merged_df
 ```{r}
 IDs <- uniqueIDs_Comparison(df1 = dailyActivity_merged_df, column1 = "Id", df2 = heartrate_seconds_merged_df, column2 = "Id")
   
 ```
+
 These means we we are only dealing with 14 clients in both dailyActivity_merged_df, and heartrate_seconds_merged_df dataframes.
+
+
 ```{r}
 print(IDs)
 ```
@@ -539,21 +553,6 @@ heartrate_seconds_merged_df <- change_to_dateTime(heartrate_seconds_merged_df, "
 see the average heart rate per unique id, see the correlation between the average heart rate and calories lost
 ```{r}
 # calculate averages
-average_hr <- function(df, column_calculate_avg){
-  averages_hr_per_athlete <- df %>%
-    group_by(Id)  %>%
-      summarise(
-        Avg_Hr = mean(column_calculate_avg),
-    )
-  
-  print(head(averages_per_athlete, 5))
-}
-```
-
-
-
-```{r}
-
 average_hr_per_athlete <- Avgs(heartrate_seconds_merged_df, c(names(heartrate_seconds_merged_df)[3]))
   
   
@@ -569,7 +568,7 @@ print(median(ceiling(average_hr_per_athlete[[new_col_name]]), na.rm = TRUE))
 
 
 ```{r}
-# Increase bottom margin to fit x-axis labels better
+# Increase bottom margin to fit x-axis labels(Clients/Athletes) better
 par(mar = c(8, 5, 4, 2) + 0.1)  
 
 
@@ -712,6 +711,7 @@ if(nrow(CaloriesIntensitiesSteps_df) == nrow(CaloriesIntensities_df) &&
 # plot a line plot see see the correlation between calories, intensity and steps
 line_plot(CaloriesIntensitiesSteps_df, "Calories", "TotalIntensity")
 ```
+
 ```{r}
 line_plot(CaloriesIntensitiesSteps_df, "Calories", "StepTotal")
 ```
@@ -723,45 +723,30 @@ line_plot(CaloriesIntensitiesSteps_df, "Calories", "AverageIntensity")
 ```{r}
 colnames(CaloriesIntensitiesSteps_df)
 ```
-```{r}
-line_plot <- function(df, x_col, y_col, i){
-    plot <- ggplot (data = df) +
-      geom_line(mapping = aes(x= .data[[x_col]] , y= .data[[y_col]] )) +
-      labs(title = paste(i, x_col, "and", y_col, "relationsip"))
-  
-  print(plot)
-  
-}
-```
- 
+
 
 ```{r}
-CaloriesIntensitiesSteps_Daily_df <- weekDate_grouping(CaloriesIntensitiesSteps_df,
-                                                       "date")
-CaloriesIntensitiesSteps_Daily_df
+CaloriesIntensitiesSteps_Daily_df <-
+  weekDate_grouping(CaloriesIntensitiesSteps_df,"date")
+head(CaloriesIntensitiesSteps_Daily_df,5)
 ```
+
 
 ```{r}
 names(CaloriesIntensitiesSteps_Daily_df)
 ```
 
+
 ```{r}
-IDS <- c(unique(CaloriesIntensitiesSteps_Daily_df[["Id"]]))
-
-random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
-
-for (i in random_Ids){
-  filtered_df <- CaloriesIntensitiesSteps_Daily_df %>%
-    filter(Id == i)
-           
-  line_plot(filtered_df,
-            "TotalIntensity_Total","Calories_Total",i
-  )
-}
+random_plots(df = CaloriesIntensitiesSteps_Daily_df,
+             fraction_of_all_len_df = 0.3,
+             X_col = "TotalIntensity_Total",
+             Y_col ="Calories_Total")
 
 ```
-### Most people hit a point of diminishing returns between intensity of 1500 to 2000
-### Advise clients to atleast hit an intensity of 1500 daily
+### Most people hit a point of diminishing returns between intensity of 50 to 200
+
+### Advise clients to atleast hit an intensity of 1250 daily to atleat make the most of their exercise
 
 
 
@@ -771,150 +756,50 @@ random_plots(df = CaloriesIntensitiesSteps_Daily_df,
              X_col = "StepTotal_Total",
              Y_col ="Calories_Total")
 ```
+### Findings:
+Different people get to the point of diminishing returns at different points there is no concrete pattern in the number of steps that would get on to hit a plateau, however most people once they hit 2000 calories they hit a point of diminishing return
 
+#### Reccomendation 1:
+Once a person has hit 2000 calories a day they can quite exercing since since even if they continue exercisings since the steps thereafter are quit insignificant
 
-
-```{r}
-IDS <- c(unique(CaloriesIntensitiesSteps_Daily_df[["Id"]]))
-
-random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
-
-for (i in random_Ids){
-  filtered_df <- CaloriesIntensitiesSteps_Daily_df %>%
-    filter(Id == i)
-           
-  line_plot(filtered_df,
-            "StepTotal_Total","Calories_Total",i
-  )
-}
-```
-#### different people get to the point of diminishing returns at different points there is no one fits all number of steps, however most people once they hit 2000 calories they hit a point of diminishing return
-
-#### Reccomendation 1: Once a person has hit 2000 calories a day they can quite exercing since since the steps they are quit insignificant
-
-#### Reccomendation 1: clients should cover the number of steps that get them to 2000 calories.
+#### Reccomendation 2: 
+clients should cover the number of steps that get them to 2000 calories.
 
 ```{r}
 CaloriesIntensitiesSteps_Weekly_df <-
   weekDate_grouping(CaloriesIntensitiesSteps_df, "week")
+
 head(CaloriesIntensitiesSteps_Weekly_df, 5)
 ```
 
 
-```{r}
-IDS <- c(unique(CaloriesIntensitiesSteps_Daily_df[["Id"]]))
-
-random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
-
-for (i in random_Ids){
-  filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
-    filter(Id == i)
-           
-  line_plott(filtered_df,
-            "StepTotal_Total","Calories_Total",i
-  )
-}
-```
-
-
-
 ```{r echo=TRUE}
-IDS <- c(unique(CaloriesIntensitiesSteps_Weekly_df[["Id"]]))
-
-random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
-
-for (i in random_Ids){
-  filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
-    filter(Id == i)
-           
-  line_plot(filtered_df,
-            "TotalIntensity_Total","Calories_Total",i
-  )
-}
+random_plots(df = CaloriesIntensitiesSteps_Weekly_df,
+             fraction_of_all_len_df = 0.3,
+             X_col = "TotalIntensity_Total",
+             Y_col = "Calories_Total")
 
 ```
 
-#### Key observation most athletes hit a point of diminishing returns after an intensity of 2500, thus they loose less caries yet the intensity is high,
+####Key observation most athletes hit a point of diminishing returns after an intensity of 2000, thus they loose less calories yet the intensity is high,
 
 #### recommendation: athletes should maintain an optimal intensity of about 2000
 
+#### This is a reflection of the relationship daily relationship between TotalIntensity_Total and Calories_Total
+
 ```{r echo=TRUE}
-IDS <- c(unique(CaloriesIntensitiesSteps_Weekly_df[["Id"]]))
+random_plots(df = CaloriesIntensitiesSteps_Weekly_df,
+             fraction_of_all_len_df = 0.1,
+             X_col = "StepTotal_Total",
+             Y_col = "Calories_Total")
 
-random_Ids = c(IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))])
-
-for (i in random_Ids){
-  filtered_df <- CaloriesIntensitiesSteps_Weekly_df %>%
-    filter(Id == i)
-           
-  line_plot(filtered_df,
-            "StepTotal_Total","Calories_Total", i
-  )
-}
 ```
-#### Where as there in no partern in the number of steps that it takes to hit a point of diminishing returns, there's is pattern in the number of calories lost beyond which an athlete hits a point of diminishing returns which is about 15000 caries weekly
-
-
-```{r}
-colnames(CaloriesIntensitiesSteps_Weekly_df)
-```
-
+#### Where as there in no partern in the number of steps that it takes to hit a point of diminishing returns, there's is pattern in the number of calories lost beyond which an athlete hits a point of diminishing returns which is about 10000 caries weekly
 
 
 
 ```{r}
-# We'll perform daily Weighted averages since to get a better glimpse of the correlation since our data us concentrated at same place
-# Calculate daily weighted averages
-
-
-CaloriesIntensitiesSteps_daily_df <- CaloriesIntensitiesSteps_df %>%
-  mutate(date = date(ActivityHour)) %>%
-  group_by(date) %>%
-  summarize(
-    daily_calories = mean(Calories),
-    daily_Intensity = mean(TotalIntensity),
-    daily_Steps = mean(StepTotal)
-)
-
-head(CaloriesIntensitiesSteps_daily_df, 5)
-```
-```{r}
-dfs <- list()
-
-
-for (file in csv_files) {
-  
-  print(paste("Working on", file))
-  
-  # create df names
-  # split the file name str character
-  df_name <- strsplit(file, split = '\\.')[[1]] #Access the first and only string
-  
-  # get the first part of the string character which is basically the name 
-  # without the csv extension
-  df_name <- df_name[1]
-  
-  # concatenate the df_name with df
-  df_name <- paste0(df_name, "_df") # Use paste0 for no space between parts
-  
-  # create full path for each file so that we can import them
-  filepath <- file.path(csv_files_Dir, file)
-  
-  # read csv 
-  df <- read.csv(filepath)
-  
-  #Check if df has missing value
-  missing_value(df = df, file = file)
-  
-  # append dfs and their names
-  dfs[[df_name]] <- df  # Store the data frame in the list, keyed by file path
-
-}
-```
-
-
-```{r}
-# Loop through the list and see if key has minuted in it
+# Loop through the list and see if key has minute in its name
 minutes_dfs = list()
 
 for (key in names(dfs)) {
@@ -935,6 +820,7 @@ for (key in names(dfs)) {
 
 ```
 
+
 ```{r}
 minuteSleep_merged_df <- minutes_dfs[["minuteSleep_merged_df"]]
 print(head(minuteSleep_merged_df))
@@ -946,6 +832,7 @@ unique(minuteSleep_merged_df[['value']])
 ```
 
 
+
 ```{r}
 HrSleep_df <- minuteSleep_merged_df[, c('Id','date', 'value')]
 
@@ -954,6 +841,8 @@ HrSleep_df$Hr <- format(HrSleep_df$date, "%I %p")
 
 print(head(HrSleep_df))
 ```
+
+
 
 ```{r}
 # Ensure 'value' is treated as a factor (categorical)
@@ -1034,10 +923,11 @@ minutes_dfs[["minuteSleep_merged_df"]] <- NULL
 print(paste("Length After removing minuteSleep_merged_df",length(minutes_dfs)))
 ```
 
+
+
 ```{r}
-# See if the the remainin dfs in minutes_df have similar values in ActivityMinute column since the are similar in shape
+# See if the the remaining dfs in minutes_df have similar values in ActivityMinute column since the are similar in shape
 for (i in minutes_dfs){
-  print(i)
   main_df = minutes_dfs[[1]]
   
   column1 <- "ActivityMinute"
@@ -1061,9 +951,10 @@ print(tail(Minuted_Merged_df, 5))
 
 ```
 
+
 ```{r}
 ggplot (data = Minuted_Merged_df) +
-  geom_point(mapping = aes(x = METs , y = Steps), color = "blue" ) 
+  geom_point(mapping = aes(x = METs , y = Steps), color = "blue" )
 ```
 #### We can't make any sence out of this lets perfomm weighted average on it
 
@@ -1073,21 +964,13 @@ weighted_AVG_df <- weekDate_grouping(Minuted_Merged_df, "date")
 
 
 ```{r}
-IDS <- c(unique(Minuted_Merged_df[["Id"]]))
-
-random_Ids = IDS[ceiling(runif((ceiling(length(IDS)*0.5)), max = length(IDS)))]
-
-for (i in random_Ids){
-  filtered_df <- Minuted_Merged_df %>%
-    filter(Id == i)
-           
-  line_plot(filtered_df,
-            "METs","Steps",i
-  )
-}
+random_plots(df = Minuted_Merged_df,
+             fraction_of_all_len_df = 0.5,
+             X_col = "METs",
+             Y_col = "Steps")
 
 ```
-
+#### Still there seems like to be no meaningfull corelations
 
 ```{r}
 weightLogInfo_merged_df <- dfs[["weightLogInfo_merged_df"]]
@@ -1102,7 +985,39 @@ print(length(weightLogInfo_merged_df[['Id']]))
 ```{r}
 ggplot (data = weightLogInfo_merged_df) +
   geom_point(mapping = aes(x = BMI , y = WeightKg), color = "blue" ) +
-  geom_point(mapping = aes(x = BMI , y = WeightPounds), color = "red" ) +
-  labs(title = "Weight  and BMI relation")
+  geom_point(mapping = aes(x = BMI , y = WeightPounds), color = "red" )+
+  geom_line(mapping = aes(x = BMI, y = WeightKg), color = "blue") +
+  geom_line(mapping = aes(x = BMI, y = WeightPounds), color = "red") +
+  labs(title = "Weight  and BMI relation", ylab = "Weight in Kg/Pounds")
 ```
+
+
+### Findings:
+14.29 percent of Bellabeat devices not giving accurate data, this is significantly high.
+
+Faulty devices have a 20% error which is rather too high to work with
+
+#### Recomendations:
+Bella beat should improve their devices that they all give accurate data
+
+Whereas getting a zero error in the tracker is almost not achievable but a 20 percent error in devices is quit alarming, Bellabeat should reduce the error to say 5 percent or lesser which is almost next to accurate. 
+
+### Findings:
+Most people hit a point of diminishing returns between intensity of 50 to 250
+
+#### Recomendations:
+Get client's specific intensity that will make them get to the point of diminishing returns where the rate at which their exercise in impacting their calories lose in quite insignificant.
+
+Since there is no one fits all intensity, tailor clients intensity as per their
+intensity based on the point where they make hit their plateau.
+
+
+### Findings:
+Different people get to the point of diminishing returns at different points there is no concrete pattern in the number of steps that would get on to hit a plateau, however most people once they hit 2000 calories they hit a point of diminishing return
+
+#### Reccomendation 1:
+Once a person has hit 2000 calories a day they can quite exercing since since even if they continue exercisings since the steps thereafter are quit insignificant
+
+#### Reccomendation 2: 
+clients should cover the number of steps that get them to 2000 calories.
 
